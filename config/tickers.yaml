@@ -1,0 +1,40 @@
+start_date: "2020-01-01"      # first date to pull on an initial load
+max_gap_days: 7               # data-quality check: flag gaps longer than this (calendar days)
+database_path: "data/pipeline.db"
+
+tickers:
+  # US large caps
+  - "AAPL"
+  - "MSFT"
+  - "GOOGL"
+  - "AMZN"
+  - "NVDA"
+  - "JPM"
+  - "XOM"
+  - "JNJ"
+  - "PG"
+  - "KO"
+  # UK large caps (London, quoted in pence)
+  - "HSBA.L"
+  - "BP.L"
+  - "SHEL.L"
+  - "AZN.L"
+  - "ULVR.L"
+  - "LLOY.L"
+  - "BARC.L"
+  # ETFs and funds
+  - "SPY"
+  - "QQQ"
+  - "VTI"
+  - "VWRL.L"
+  - "ISF.L"
+  - "AGG"
+  - "GLD"
+  # Index
+  - "^FTSE"
+
+fx_pairs:
+  - "GBPUSD=X"
+  - "EURUSD=X"
+  - "EURGBP=X"
+  - "USDJPY=X"
