@@ -25,11 +25,11 @@ and a simple dashboard, running on a schedule with no manual steps.
 - Cloud infrastructure (stretch goal only)
 
 ## Phases
-0. Setup: repo, universe, scope (this page)
-1. First win: ingest + store + validate
-2. Automation: scheduled runs, logging, failure alerts
-3. Modelling: derived metrics and analytics layer
-4. Presentation: dashboard, README with architecture diagram, write-up
+- [x] 0. Setup: repo, universe, scope (this page)
+- [x] 1. First win: ingest + store + validate
+- [x] 2. Automation: scheduled runs, logging, failure alerts
+- [ ] 3. Modelling: derived metrics and analytics layer
+- [ ] 4. Presentation: dashboard, README with architecture diagram, write-up
 
 ## Success criteria
 - One command rebuilds the full dataset from scratch

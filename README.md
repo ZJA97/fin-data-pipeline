@@ -133,3 +133,43 @@ pipeline/run.py             entry point
 tests/test_checks.py        test for the checks
 tests/test_ingest.py        regression test for ingestion validation
 ```
+
+
+## Ledger and valuation (Phase 2)
+
+Turns raw market data plus a synthetic trade ledger into daily positions, market value and P&L in GBP.
+
+### Data flow
+
+| Layer | Tables | Purpose |
+|---|---|---|
+| Raw | `raw_prices`, `raw_fx`, `raw_trades` | Data exactly as loaded, defects included |
+| Cleaned | `clean_prices`, `clean_fx`, `clean_trades`, `dim_security` | Deduplicated, normalised tickers, pence converted to pounds |
+| Analytics | `dim_date`, `fx_daily`, `price_daily`, `fct_trades_gbp`, `daily_positions`, `trade_ledger`, `ledger_eod`, `daily_valuation`, `portfolio_daily` | Positions, valuation and P&L in GBP |
+
+### Key design decisions
+
+- **Synthetic trades are seeded and deliberately messy.** About 2% of rows have padded or lowercase tickers, and about 2% are exact duplicates, so the cleaning layer has real work to do. The generator sizes orders by a target amount in pounds, so cheap and expensive securities end up with comparable position sizes.
+- **Pence vs pounds.** London-listed prices are mostly quoted in pence. Validation caught a ticker quoted in pounds (VWRL.L), so the unit is set per security in `dim_security`.
+- **Indices are not tradable.** Index tickers are flagged `is_index` and kept as future benchmarks, after validation showed an index being treated as a USD holding.
+- **Forward-filled prices and FX.** UK and US holidays differ, so each security is carried at its last known price. `is_stale` flags those rows. Forward-filling uses a window function rather than per-row lookups, which cut that step from about 52s to 0.3s (the whole analytics layer now builds in about 1s).
+- **Average-cost P&L.** Implemented as a recursive CTE walking each security's trades in order. Buy fees are capitalised into cost basis and sell fees reduce proceeds.
+- **Historical FX on cost basis.** Each trade is converted at its own trade-date rate, so unrealised P&L includes currency effects for USD holdings.
+
+### Testing
+
+The full suite has 16 tests. For this phase, `pytest` runs 13 invariants (no trades lost between layers, no short positions, every position has a price and FX rate, cash flows reconcile to P&L) plus a known-answer test of the average-cost ledger against a hand-computed example. The other 2 cover Phase 1 ingestion and data checks.
+
+### Result (latest run)
+
+384 trades across 24 securities, 2020-01-02 to 2026-10-22. On 2026-10-23: portfolio value £273,342 on cost basis £178,541; realised P&L £136,388, unrealised £94,801, total £231,189. 21 positions held; the largest, GOOGL, is 22.7% of portfolio value.
+
+The data is synthetic, so these figures demonstrate the mechanics rather than investment performance. Trades are drawn at random, which is why position weights are uneven. The 24 tradable securities come from a 25-ticker market data set (the 25th is the FTSE index, kept as a benchmark), with prices from 2020-01-02 to 2026-10-23.
+
+### Run it
+
+```powershell
+python run_pipeline.py
+```
+
+This regenerates the synthetic trades, rebuilds the cleaned and analytics layers from the raw tables, and runs the test suite. Market data ingestion (Phase 1) is run separately.
