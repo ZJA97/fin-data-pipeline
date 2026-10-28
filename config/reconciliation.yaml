@@ -1,0 +1,10 @@
+reconciliation:
+  default_tolerance_pct: 0.50   # above this = BREAK
+  warn_tolerance_pct: 0.10      # above this but within tolerance = WARN
+  overrides:                    # per-ticker tolerance, e.g. noisier instruments
+    "BTC-USD": 2.0
+
+dq:
+  stale_run_days: 5                       # N identical closes in a row = stale
+  max_age_business_days: 3                # latest price older than this = stale
+  min_coverage_for_expected_day: 0.5      # a day counts as a trading day if >=50% of tickers have it

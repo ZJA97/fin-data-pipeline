@@ -28,7 +28,7 @@ and a simple dashboard, running on a schedule with no manual steps.
 - [x] 0. Setup: repo, universe, scope (this page)
 - [x] 1. First win: ingest + store + validate
 - [x] 2. Automation: scheduled runs, logging, failure alerts
-- [ ] 3. Modelling: derived metrics and analytics layer
+- [x] 3. Modelling: derived metrics and analytics layer
 - [ ] 4. Presentation: dashboard, README with architecture diagram, write-up
 
 ## Success criteria

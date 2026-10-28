@@ -135,7 +135,7 @@ tests/test_ingest.py        regression test for ingestion validation
 ```
 
 
-## Ledger and valuation (Phase 2)
+## Phase 2: Ledger and valuation 
 
 Turns raw market data plus a synthetic trade ledger into daily positions, market value and P&L in GBP.
 
@@ -173,3 +173,24 @@ python run_pipeline.py
 ```
 
 This regenerates the synthetic trades, rebuilds the cleaned and analytics layers from the raw tables, and runs the test suite. Market data ingestion (Phase 1) is run separately.
+
+## Phase 3: Reconciliation and data quality
+
+Compares daily adjusted close prices from two independent sources (yfinance and Tiingo), applies configurable tolerance rules, and records every discrepancy in a `recon_breaks` table. Data quality checks (nulls, duplicates, stale prices, missing days) are logged to `dq_results`. Tolerances live in `config/reconciliation.yaml`.
+
+**Latest run (2020-01-02 to 2026-10-23)**
+
+| Result | Rows |
+|---|---|
+| MATCH | 25,499 |
+| WARN (within break tolerance) | 181 |
+| BREAK | 0 |
+
+15 of 25 tickers are covered by both sources. The other 10 (nine LSE tickers and ^FTSE) are not covered by Tiingo and are excluded from reconciliation, though the data quality checks still run on them.
+
+**Known differences**
+- **QQQ dividend adjustment:** all 181 WARNs are QQQ rows before 21 Sep 2020, with a steady offset of about 0.13%. Raw closes agree; the two providers' adjusted prices step differently at that quarter's dividend, so the sources apply the adjustment differently. This is below the 0.5% break tolerance.
+- **Single-day gaps in UK data:** the missing-day check found 7 days where yfinance has no row for a UK ticker on a day the LSE was open. They can't be cross-checked, since the second source doesn't cover the UK.
+- **Trailing gaps:** a ticker missing only its latest days (e.g. VWRL.L) is caught by the stale-price check, not the missing-day check.
+
+**Testing:** unit tests cover the reconciliation statuses and each data quality check. I also planted a 5% error in a copy of the database, and the run flagged it as a BREAK.
