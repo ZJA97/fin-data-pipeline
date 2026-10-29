@@ -1,8 +1,6 @@
 .venv/
 __pycache__/
 .pytest_cache/
-data/
 logs/
-*.db
 .env
-data/pipeline.db
+*.db*.bak

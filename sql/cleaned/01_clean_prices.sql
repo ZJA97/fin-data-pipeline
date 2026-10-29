@@ -11,7 +11,8 @@ WITH ranked AS (
             ORDER BY ingested_at DESC
         ) AS rn
     FROM raw_prices
-    WHERE close IS NOT NULL
+    WHERE source = 'yfinance'
+      AND close IS NOT NULL
       AND close > 0
 )
 SELECT ticker, price_date, open, high, low, close, adj_close, volume

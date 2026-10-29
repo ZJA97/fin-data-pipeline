@@ -35,8 +35,9 @@ def approx_price_gbp(ticker: str, price: float) -> float:
 
 
 def load_prices(conn: sqlite3.Connection) -> pd.DataFrame:
-    # CHANGE this query if your raw_prices column names differ
-    df = pd.read_sql_query("SELECT ticker, date, close FROM raw_prices", conn)
+    df = pd.read_sql_query(
+        "SELECT ticker, date, close FROM raw_prices WHERE source = 'yfinance'", conn
+    )
     df["date"] = pd.to_datetime(df["date"])
     return df.dropna(subset=["close"])
 

@@ -157,7 +157,7 @@ def main():
     print("Reconciliation:\n", recon["status"].value_counts().to_string(), "\n")
     print("Data quality findings:\n",
           dq.groupby(["source", "check"]).size().to_string() if not dq.empty else "none")
-    sys.exit(1 if (breaks["status"] == "BREAK").any() else 0)
+    sys.exit(2 if (breaks["status"] == "BREAK").any() else 0)
 
 
 if __name__ == "__main__":

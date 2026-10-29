@@ -27,11 +27,12 @@ def main(argv: list[str] | None = None) -> int:
         cfg = load_config(args.config)
     except (OSError, ValueError) as exc:
         log.error("Could not load config: %s", exc)
-        return 2
+        return 1  # 2 is reserved for "data problems"
 
     targets = [("raw_prices", cfg.tickers), ("raw_fx", cfg.fx_pairs)]
     conn = get_connection(cfg.database_path)
-    ok = True
+    ingest_ok = True
+    checks_ok = True
 
     try:
         init_db(conn)
@@ -43,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
             failed = [r for r in results if r.error]
             total = sum(r.rows for r in results)
             log.info("%s: %d symbols, %d new rows, %d failed", table, len(symbols), total, len(failed))
-            ok &= not failed
+            ingest_ok &= not failed
 
         log.info("=== Data quality checks ===")
         for table, symbols in targets:
@@ -51,12 +52,15 @@ def main(argv: list[str] | None = None) -> int:
             for check in run_all_checks(df, symbols, cfg.max_gap_days):
                 level = logging.INFO if check.passed else logging.ERROR
                 log.log(level, "%s %-4s %-16s %s", table, "PASS" if check.passed else "FAIL", check.name, check.detail)
-                ok &= check.passed
+                checks_ok &= check.passed
     finally:
         conn.close()
 
+    ok = ingest_ok and checks_ok
     log.info("Finished: %s", "all good" if ok else "completed with problems - see log above")
-    return 0 if ok else 1
+    if not ingest_ok:
+        return 1  # ingestion failed: the workflow retries
+    return 0 if checks_ok else 2  # data problems: the workflow alerts, no retry
 
 
 if __name__ == "__main__":
