@@ -8,19 +8,24 @@ See [docs/SCOPE.md](docs/SCOPE.md) for the full scope and phases.
 
 | Group | Tickers |
 |---|---|
-| UK equities (10) | SHEL.L, AZN.L, HSBA.L, ULVR.L, BP.L, GSK.L, RIO.L, LSEG.L, BARC.L, DGE.L |
-| US equities (10) | AAPL, MSFT, NVDA, GOOGL, AMZN, JPM, JNJ, XOM, KO, V |
-| ETFs (5) | VUSA.L (S&P 500), VWRL.L (global equities), ISF.L (FTSE 100), IGLT.L (UK gilts), SGLN.L (gold) |
+| UK equities (7) | SHEL.L, AZN.L, HSBA.L, ULVR.L, BP.L, LLOY.L, BARC.L |
+| US equities (10) | AAPL, MSFT, NVDA, GOOGL, AMZN, JPM, JNJ, XOM, PG, KO |
+| ETFs (7) | SPY, QQQ, VTI, AGG, GLD, VWRL.L, ISF.L |
+| Index (1) | ^FTSE (benchmark, not traded) |
 
 All 25 tickers resolved and were validated in Phase 1.
 
 ## Status
 
+## Status
+
 - [x] Phase 0: Setup
-- [x] Phase 1: Ingest, store, validate
-- [ ] Phase 2: Automation
-- [ ] Phase 3: Modelling
-- [ ] Phase 4: Presentation
+- [x] Phase 1: Ingestion
+- [x] Phase 2: Ledger and valuation
+- [x] Phase 3: Reconciliation and data quality
+- [x] Phase 4: Automation
+- [ ] Phase 5: Dashboard
+- [ ] Phase 6: AI summary and polish
 
 ## Phase 1: Ingestion
 
@@ -194,3 +199,74 @@ Compares daily adjusted close prices from two independent sources (yfinance and 
 - **Trailing gaps:** a ticker missing only its latest days (e.g. VWRL.L) is caught by the stale-price check, not the missing-day check.
 
 **Testing:** unit tests cover the reconciliation statuses and each data quality check. I also planted a 5% error in a copy of the database, and the run flagged it as a BREAK.
+
+
+## Phase 4: Automation
+
+The pipeline runs unattended on GitHub Actions every weekday at 22:00 UTC, after US markets close. It retries if something crashes, emails me if the data fails its checks, and commits the results back to the repo, so the repo's history is a daily record of the pipeline's output.
+
+```mermaid
+flowchart LR
+    A["Schedule: 22:00 UTC, Mon-Fri"] --> B["Ingest prices and FX (yfinance)"]
+    B --> C["Trades, SQL layers, tests"]
+    C --> D["Ingest Tiingo prices"]
+    D --> E["Reconcile and data quality"]
+    E --> F["Export CSVs"]
+    F --> G["Commit to repo"]
+    E -.->|"breaks or failed checks"| H["Email alert"]
+    B -.->|"crash after 3 attempts"| H
+```
+
+### How a run works
+
+1. The runner starts with an empty database and rebuilds everything from the source APIs (Yahoo Finance via `yfinance`, and Tiingo).
+2. `run_pipeline.py` executes each step in order: ingest and raw checks, synthetic trades, the `cleaned` and `analytics` SQL layers, the test suite, Tiingo ingest, reconciliation, and export.
+3. The results are appended to CSVs in `data/exports/` and committed by the Actions bot:
+   - `recon_breaks.csv`: every price difference between the two sources that exceeded tolerance
+   - `dq_results.csv`: data quality findings (nulls, duplicates, stale prices, missing days)
+   - `run_log.csv`: one summary row per run (row counts, number of exceptions)
+
+### Failure handling
+
+`run_pipeline.py` reports what happened through its exit code, and the workflow reacts differently to each:
+
+| Exit code | Meaning | Workflow behaviour |
+|---|---|---|
+| `0` | Everything passed | Commit results, green run |
+| `1` | A step crashed (API failure, network error, bug) | Retry up to 3 times, 60s apart, then email and fail |
+| `2` | Pipeline ran but found data problems (reconciliation breaks, failed checks, failing tests) | No retry, email, commit the findings, red run |
+
+Retrying a crash can fix it, but retrying a data problem only repeats it, which is why the two cases are kept apart.
+
+Reconciliation differences inside the warning tolerance (`WARN`) are logged to the exports but don't trigger an alert, because only a `BREAK` is treated as a failure. Tolerances are set per ticker in `config/reconciliation.yaml`.
+
+### Design decisions
+
+- **The database is rebuilt, not committed.** `pipeline.db` is about 25 MB and changes daily, so committing it would bloat the repo quickly. Small CSV exports commit cleanly and show readable diffs.
+- **Two sources, one is the reference.** The `cleaned` layer is built from yfinance only. Tiingo is there to check it, not to feed it, so the pipeline's numbers never depend on which source arrived last.
+- **Tiingo covers US securities only.** The UK tickers (`.L`) and `^FTSE` are excluded from reconciliation and reported as not covered.
+
+### Setup
+
+The workflow needs four repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Purpose |
+|---|---|
+| `TIINGO_API_KEY` | Tiingo API access |
+| `MAIL_USERNAME` | Gmail address used to send alerts |
+| `MAIL_APP_PASSWORD` | Gmail app password (not the account password) |
+| `ALERT_TO` | Address that receives alerts |
+
+To trigger a run manually, use **Actions → Daily pipeline → Run workflow**. To run locally:
+
+```powershell
+$env:TIINGO_API_KEY = "<your key>"
+python run_pipeline.py
+```
+
+### Known limitations
+
+- Yahoo Finance is an unofficial source and sometimes throttles cloud IPs, so an occasional retry is expected.
+- Each run refetches full history, which costs one Tiingo request per US ticker per day. That's fine on the free tier now, but it would need incremental loading to scale.
+- The synthetic trades are seeded but drawn from the available price dates, so they shift slightly as new days arrive.
+- `run_log.csv` and the exports are append-only, so repeated `WARN` rows accumulate across runs.
