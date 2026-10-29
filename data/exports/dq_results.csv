@@ -6,3 +6,10 @@ run_ts,source,check,ticker,price_date,detail
 2026-10-29T11:04:00+00:00,source_a,MISSING_DAY,VWRL.L,2025-10-24,no price on a L trading day
 2026-10-29T11:04:00+00:00,source_a,MISSING_DAY,VWRL.L,2026-03-06,no price on a L trading day
 2026-10-29T11:04:00+00:00,source_a,MISSING_DAY,^FTSE,2020-12-22,no price on a L trading day
+2026-10-29T11:17:05+00:00,source_a,MISSING_DAY,BARC.L,2025-10-27,no price on a L trading day
+2026-10-29T11:17:05+00:00,source_a,MISSING_DAY,BP.L,2025-02-27,no price on a L trading day
+2026-10-29T11:17:05+00:00,source_a,MISSING_DAY,HSBA.L,2026-04-13,no price on a L trading day
+2026-10-29T11:17:05+00:00,source_a,MISSING_DAY,ISF.L,2025-10-24,no price on a L trading day
+2026-10-29T11:17:05+00:00,source_a,MISSING_DAY,VWRL.L,2025-10-24,no price on a L trading day
+2026-10-29T11:17:05+00:00,source_a,MISSING_DAY,VWRL.L,2026-03-06,no price on a L trading day
+2026-10-29T11:17:05+00:00,source_a,MISSING_DAY,^FTSE,2020-12-22,no price on a L trading day
