@@ -1,5 +1,7 @@
 # Automated Financial Data Pipeline
 
+[![Daily pipeline](https://github.com/ZJA97/fin-data-pipeline/actions/workflows/pipeline.yml/badge.svg)](https://github.com/ZJA97/fin-data-pipeline/actions/workflows/pipeline.yml)
+
 An automated pipeline that ingests daily market data for 25 securities, validates it, and models it into analysis-ready tables.
 
 See [docs/SCOPE.md](docs/SCOPE.md) for the full scope and phases.
