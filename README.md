@@ -373,7 +373,7 @@ Data quality needs attention. Reconciliation shows 181 WARN results, and the dat
 
 **Delivery:** the summary is written to `summary.txt` and sent with the same Gmail SMTP step as the alerts. The workflow needs a fifth repository secret, `ANTHROPIC_API_KEY`. Without it, the run still works and sends the fallback text. The model can be changed with the `SUMMARY_MODEL` environment variable.
 
-**Testing:** `tests/test_summary.py` checks the figures against a small in-memory database, the number check, truncated responses, and the fallback when the API fails. A separate `tests` workflow runs the whole suite on every push.
+**Testing:** `tests/test_summary.py` checks the figures against a small in-memory database, the number check, truncated responses, and the fallback when the API fails. A separate `tests` workflow runs the whole suite on every push. The `tests` workflow runs the unit tests on every push. The 13 data invariants in `tests/test_pipeline.py` need the built database, so they run inside the daily pipeline workflow instead.
 
 ### Limitations and next steps
 
