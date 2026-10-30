@@ -1,10 +1,36 @@
 # Automated Financial Data Pipeline
 
 [![Daily pipeline](https://github.com/ZJA97/fin-data-pipeline/actions/workflows/pipeline.yml/badge.svg)](https://github.com/ZJA97/fin-data-pipeline/actions/workflows/pipeline.yml)
+[![Tests](https://github.com/ZJA97/fin-data-pipeline/actions/workflows/tests.yml/badge.svg)](https://github.com/ZJA97/fin-data-pipeline/actions/workflows/tests.yml)
+
 
 An automated pipeline that ingests daily market data for 25 securities, validates it, and models it into analysis-ready tables.
 
 See [docs/SCOPE.md](docs/SCOPE.md) for the full scope and phases.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Y["yfinance: prices and FX"] --> RAW[("Raw tables")]
+    T["Tiingo: US prices"] --> RAW
+    G["Synthetic trade generator"] --> RAW
+    RAW --> CLEAN["Cleaned layer"]
+    CLEAN --> AN["Analytics layer: positions, valuation, P&L"]
+    RAW --> REC["Reconciliation and data quality"]
+    REC --> BR[("recon_breaks, dq_results")]
+    AN --> MET["Metrics: returns, volatility, drawdown"]
+    MET --> CSV["CSV exports"]
+    CSV --> PBI["Power BI dashboard"]
+    AN --> FACTS["Facts builder"]
+    BR --> FACTS
+    FACTS --> LLM["LLM narration and number check"]
+    LLM --> MAIL["Daily summary email"]
+    LLM -.->|"on any failure"| TPL["Template summary"]
+    TPL --> MAIL
+    REC -.->|"failed checks"| ALERT["Email alert"]
+    GHA["GitHub Actions, weekdays 22:00 UTC"] -.->|"runs"| Y
+```
 
 ## Security universe
 
@@ -19,15 +45,13 @@ All 25 tickers resolved and were validated in Phase 1.
 
 ## Status
 
-## Status
-
 - [x] Phase 0: Setup
 - [x] Phase 1: Ingestion
 - [x] Phase 2: Ledger and valuation
 - [x] Phase 3: Reconciliation and data quality
 - [x] Phase 4: Automation
 - [x] Phase 5: Dashboard
-- [ ] Phase 6: AI summary and polish
+- [x] Phase 6: AI summary and polish
 
 ## Phase 1: Ingestion
 
@@ -325,3 +349,45 @@ Actions workflow after the pipeline, and the CSVs are committed back to the repo
 The `scripts/` folder holds the checks used to validate the data: `list_tables.py`
 (schema listing), `check_returns.py` (largest daily moves) and `check_recon.py`
 (reconciliation diagnostics).
+
+## Phase 6: AI summary and polish
+
+After each scheduled run, the pipeline emails a short written summary of the portfolio and the data quality results.
+
+**Design:** Python computes every figure, and the LLM only writes the prose. `src/summary/facts.py` queries the analytics tables (portfolio value, day P&L, top movers, reconciliation and data quality counts, stale prices) and passes the pre-formatted figures to the model. The model is told to copy them exactly and never calculate or estimate.
+
+**Guardrails** (all in `src/summary/narrate.py`):
+- Any number in the output that isn't in the facts rejects the response.
+- A response cut off at the token limit is rejected.
+- On any rejection or API error, the email is built from a plain template instead, so a summary is always sent. The footer says whether the source was `llm` or `fallback`.
+
+**Example output** (from a scheduled run):
+
+```text
+Market value closed at £284,002, with a day P&L of -£173 (-0.06%). Total P&L is £201,520 across 21 positions held.
+
+Top gainers were AZN.L (£760), SHEL.L (£475) and AAPL (£251). Top losers were GOOGL (-£1,280), AMZN (-£463) and NVDA (-£303).
+
+Data quality needs attention. Reconciliation shows 181 WARN results, and the data quality checks flagged 7 MISSING_DAY issues. Stale prices count is 0.
+```
+
+**Delivery:** the summary is written to `summary.txt` and sent with the same Gmail SMTP step as the alerts. The workflow needs a fifth repository secret, `ANTHROPIC_API_KEY`. Without it, the run still works and sends the fallback text. The model can be changed with the `SUMMARY_MODEL` environment variable.
+
+**Testing:** `tests/test_summary.py` checks the figures against a small in-memory database, the number check, truncated responses, and the fallback when the API fails. A separate `tests` workflow runs the whole suite on every push.
+
+### Limitations and next steps
+
+**Limitations**
+- The number check catches invented figures such as £9,999, but a wrong single digit can pass by chance, and it can't judge whether the commentary is sensible.
+- The summary reports the latest date in `portfolio_daily`, which can lag the calendar date when markets are closed.
+- Trades are synthetic, so P&L demonstrates the mechanics rather than real performance.
+- Prices come from free sources (Yahoo is unofficial), and Tiingo covers only 15 of the 25 tickers, so reconciliation is partial.
+- Each run refetches full price history and rebuilds the database from scratch.
+- The Power BI report reads CSV exports and is refreshed manually.
+
+**Next steps**
+- Incremental loading, so a run only fetches new days.
+- A freshness alert, and logging how often the summary falls back to the template.
+- A third price source for UK tickers.
+- Real trade data in place of the synthetic generator.
+- ETF look-through for sector exposure.
