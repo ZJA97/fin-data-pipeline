@@ -1,0 +1,25 @@
+ticker,name,sector
+AAPL,Apple,Technology
+AGG,iShares Core US Aggregate Bond ETF,Fixed Income (ETF)
+AMZN,Amazon,Consumer Discretionary
+AZN.L,AstraZeneca,Health Care
+BARC.L,Barclays,Financials
+BP.L,BP,Energy
+GLD,SPDR Gold Shares,Commodities (ETF)
+GOOGL,Alphabet,Communication Services
+HSBA.L,HSBC,Financials
+ISF.L,iShares Core FTSE 100 ETF,Broad Equity (ETF)
+JNJ,Johnson & Johnson,Health Care
+JPM,JPMorgan Chase,Financials
+KO,Coca-Cola,Consumer Staples
+LLOY.L,Lloyds Banking Group,Financials
+MSFT,Microsoft,Technology
+NVDA,NVIDIA,Technology
+PG,Procter & Gamble,Consumer Staples
+QQQ,Invesco QQQ Trust,Broad Equity (ETF)
+SHEL.L,Shell,Energy
+SPY,SPDR S&P 500 ETF,Broad Equity (ETF)
+ULVR.L,Unilever,Consumer Staples
+VTI,Vanguard Total Stock Market ETF,Broad Equity (ETF)
+VWRL.L,Vanguard FTSE All-World ETF,Broad Equity (ETF)
+XOM,Exxon Mobil,Energy
