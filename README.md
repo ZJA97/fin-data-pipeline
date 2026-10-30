@@ -26,7 +26,7 @@ All 25 tickers resolved and were validated in Phase 1.
 - [x] Phase 2: Ledger and valuation
 - [x] Phase 3: Reconciliation and data quality
 - [x] Phase 4: Automation
-- [ ] Phase 5: Dashboard
+- [x] Phase 5: Dashboard
 - [ ] Phase 6: AI summary and polish
 
 ## Phase 1: Ingestion
@@ -272,3 +272,56 @@ python run_pipeline.py
 - Each run refetches full history, which costs one Tiingo request per US ticker per day. That's fine on the free tier now, but it would need incremental loading to scale.
 - The synthetic trades are seeded but drawn from the available price dates, so they shift slightly as new days arrive.
 - `run_log.csv` and the exports are append-only, so repeated `WARN` rows accumulate across runs.
+
+## Phase 5: Dashboard
+
+A Power BI report (`powerbi/fin-dashboard.pbix`) with five pages: portfolio
+overview, returns, currency and sector exposure, volatility and drawdown, and
+reconciliation.
+
+The analytics tables live in SQLite at `data/pipeline.db`. Power BI Desktop has
+no native SQLite connector, so `src/dashboard/build_metrics.py` computes the
+performance and risk metrics and `src/dashboard/export_for_powerbi.py` exports
+the dashboard tables to CSV in `powerbi/data/`. Both run in the scheduled GitHub
+Actions workflow after the pipeline, and the CSVs are committed back to the repo.
+
+**Method**
+- Returns are calculated from daily P&L over the previous day's market value,
+  so buying more of a holding is never counted as a gain.
+- Volatility is a 30-day rolling figure, annualised over 252 trading days.
+- Drawdown is measured from the running peak since the start of the backtest.
+- Exposure is shown at the latest date, by quote currency and by sector
+  (sectors are mapped in `config/sectors.csv`).
+
+![Overview](docs/img/Overview.JPG)
+![Returns](docs/img/Returns.JPG)
+![Exposure](docs/img/Exposure.JPG)
+![Risk](docs/img/Risk.JPG)
+![Reconciliation](docs/img/Reconciliation.JPG)
+
+**Findings**
+- The backtest covers the March 2020 crash and the April 2025 sell-off. Both are
+  visible in the volatility and drawdown views (max drawdown -29.94%).
+- Reconciliation compares two price sources for QQQ only, from January to
+  September 2020. It shows a stable offset of about 0.13%, above the 0.1%
+  warning threshold and well below the 0.5% break threshold: 181 warnings,
+  0 breaks.
+- Data quality checks flagged 7 missing London trading days across six tickers.
+
+**Limitations**
+- Sector exposure treats each ETF as its own category rather than looking
+  through to its holdings.
+- Trades are synthetic, so returns illustrate the pipeline and are not a real
+  track record.
+- Only QQQ is reconciled across sources, so the reconciliation page shows the
+  mechanism working rather than full coverage.
+
+**Refreshing the dashboard**
+1. Run `git pull` to fetch the latest CSVs.
+2. Open `powerbi/fin-dashboard.pbix` and click **Home → Refresh**.
+3. If you have cloned the repo, first change the `DataFolder` parameter
+   (**Transform data → Edit parameters**) to your local `powerbi\data\` path.
+
+The `scripts/` folder holds the checks used to validate the data: `list_tables.py`
+(schema listing), `check_returns.py` (largest daily moves) and `check_recon.py`
+(reconciliation diagnostics).
