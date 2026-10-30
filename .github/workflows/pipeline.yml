@@ -49,11 +49,16 @@ jobs:
           done
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
 
+      - name: Build dashboard data
+        run: |
+          python -m src.dashboard.build_metrics
+          python -m src.dashboard.export_for_powerbi
+
       - name: Commit results
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/exports
+          git add data/exports powerbi/data
           if git diff --cached --quiet; then
             echo "No changes"
           else
