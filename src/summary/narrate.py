@@ -52,10 +52,13 @@ def narrate(facts: dict) -> tuple[str, str]:
         client = Anthropic()  # reads ANTHROPIC_API_KEY from the environment
         msg = client.messages.create(
             model=MODEL,
-            max_tokens=400,
+            max_tokens=1500,
             system=SYSTEM,
             messages=[{"role": "user", "content": json.dumps(facts, indent=2, ensure_ascii=False)}],
         )
+        log.info("stop_reason=%s usage=%s", msg.stop_reason, msg.usage)
+        if msg.stop_reason == "max_tokens":
+            raise ValueError("response truncated at max_tokens")
         text = "".join(b.text for b in msg.content if b.type == "text").strip()
         if not text:
             raise ValueError("empty response")

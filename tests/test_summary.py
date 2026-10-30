@@ -35,11 +35,22 @@ def conn():
     return c
 
 
-def fake_client(text):
-    reply = SimpleNamespace(content=[SimpleNamespace(type="text", text=text)])
+def fake_client(text, stop_reason="end_turn"):
+    reply = SimpleNamespace(
+        content=[SimpleNamespace(type="text", text=text)],
+        stop_reason=stop_reason,
+        usage=None,
+    )
     return lambda: SimpleNamespace(
         messages=SimpleNamespace(create=lambda **kw: reply)
     )
+
+def test_truncated_response_triggers_fallback(conn, monkeypatch):
+    monkeypatch.setattr(
+        narrate_mod, "Anthropic", fake_client("Value is £2,050 (-0", "max_tokens")
+    )
+    text, source = narrate_mod.narrate(build_facts(conn))
+    assert source == "fallback"
 
 
 def test_facts_values(conn):
