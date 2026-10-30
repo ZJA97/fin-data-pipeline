@@ -6,3 +6,5 @@ logs/
 *.db*.bak
 *.bak
 summary.txt
+
+data/pipeline.db
