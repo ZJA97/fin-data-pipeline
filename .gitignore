@@ -5,3 +5,4 @@ logs/
 .env
 *.db*.bak
 *.bak
+summary.txt

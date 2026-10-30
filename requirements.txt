@@ -4,3 +4,4 @@ numpy
 PyYAML>=6.0
 requests
 pytest==9.2.0
+anthropic

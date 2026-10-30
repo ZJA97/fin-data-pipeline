@@ -66,6 +66,24 @@ jobs:
             git push
           fi
 
+      - name: Build daily summary
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m scripts.run_summary --out summary.txt
+
+      - name: Email daily summary
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_APP_PASSWORD }}
+          to: ${{ secrets.ALERT_TO }}
+          from: Daily Summary <${{ secrets.MAIL_USERNAME }}>
+          subject: "fin-data-pipeline: daily portfolio summary"
+          body: file://summary.txt
+
       - name: Email alert
         if: ${{ failure() || steps.pipeline.outputs.exit_code == '2' }}
         uses: dawidd6/action-send-mail@v3
